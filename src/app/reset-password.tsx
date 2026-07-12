@@ -27,6 +27,12 @@ export default function ResetPasswordScreen() {
       setFailed(true);
       return;
     }
+    // Supabase reports link problems in the URL hash (e.g. otp_expired).
+    // Surface that immediately instead of waiting out the session check.
+    if (typeof window !== "undefined" && /[#&]error=/.test(window.location.hash)) {
+      setFailed(true);
+      return;
+    }
     // The recovery link signs the user in with a short-lived session.
     // If no session shows up shortly, the link is invalid or expired.
     let settled = false;
