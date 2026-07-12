@@ -41,3 +41,6 @@ example
 # generated native folders
 /ios
 /android
+
+# environment (real Supabase values live in local .env; see .env.example)
+.env

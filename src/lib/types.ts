@@ -67,6 +67,23 @@ export interface StockListing {
   currency?: string; // ISO code; undefined = USD
 }
 
+export interface User {
+  id: string;
+  email: string;
+  displayName: string;
+  avatarUrl?: string; // "emoji:🧸" for emoji avatars, or a real URL later
+  createdAt: string;
+  authProvider: "email" | "google"; // google deferred; field exists so it's config, not schema
+}
+
+export interface Friendship {
+  id: string;
+  requesterId: string;
+  addresseeId: string;
+  status: "pending" | "accepted";
+  createdAt: string;
+}
+
 // Phase 1 persists only { status, addedAt } per squishy; the full entry
 // shape below is the Phase 2 target (condition, price paid, tags, notes).
 export type CollectionStatus = "owned" | "wishlist";

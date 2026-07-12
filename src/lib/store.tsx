@@ -1,9 +1,14 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "./auth";
+import { supabase } from "./supabase";
 import type { CollectionStatus } from "./types";
 
-// Phase 1 collection store: a map of squishyId -> { status, addedAt },
-// persisted to localStorage on web. When the iOS build lands, swap the
-// storage shim for AsyncStorage — the context API stays identical.
+// Collection store. Two backends behind one context API:
+//   signed out → localStorage (pre-account behavior, unchanged)
+//   signed in  → Supabase user_collection_entries, optimistic updates
+// On first login any local entries migrate to the account (server wins
+// on conflict), then local storage is cleared so there's one source of
+// truth per mode.
 
 interface StoredEntry {
   status: CollectionStatus;
@@ -14,7 +19,7 @@ type Entries = Record<string, StoredEntry>;
 
 const STORAGE_KEY = "squishydex.collection.v1";
 
-const storage = {
+const localStore = {
   load(): Entries {
     try {
       if (typeof localStorage === "undefined") return {};
@@ -32,10 +37,19 @@ const storage = {
       // Non-fatal: collection just won't persist this session.
     }
   },
+  clear() {
+    try {
+      if (typeof localStorage !== "undefined") localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+  },
 };
 
 interface CollectionContextValue {
   entries: Entries;
+  /** True while the signed-in collection is first loading from the server. */
+  syncing: boolean;
   statusOf(squishyId: string): CollectionStatus | null;
   toggle(squishyId: string, status: CollectionStatus): void;
   idsWithStatus(status: CollectionStatus): string[];
@@ -44,11 +58,70 @@ interface CollectionContextValue {
 const CollectionContext = createContext<CollectionContextValue | null>(null);
 
 export function CollectionProvider({ children }: { children: React.ReactNode }) {
-  const [entries, setEntries] = useState<Entries>(() => storage.load());
+  const { user } = useAuth();
+  const [entries, setEntries] = useState<Entries>(() => localStore.load());
+  const [syncing, setSyncing] = useState(false);
+  // Which mode the current `entries` belong to, so we never write one
+  // mode's state into the other's storage.
+  const modeRef = useRef<"local" | string>("local");
 
+  // Persist to localStorage only in local mode.
   useEffect(() => {
-    storage.save(entries);
+    if (modeRef.current === "local") localStore.save(entries);
   }, [entries]);
+
+  // Switch backends when auth state changes.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAccount(userId: string) {
+      if (!supabase) return;
+      setSyncing(true);
+
+      // One-time migration: push pre-account local entries up, server wins.
+      const local = localStore.load();
+      const localIds = Object.keys(local);
+      if (localIds.length > 0) {
+        const rows = localIds.map((squishyId) => ({
+          user_id: userId,
+          squishy_id: squishyId,
+          status: local[squishyId].status,
+          added_at: local[squishyId].addedAt,
+        }));
+        const { error } = await supabase
+          .from("user_collection_entries")
+          .upsert(rows, { onConflict: "user_id,squishy_id", ignoreDuplicates: true });
+        if (!error) localStore.clear();
+        // On error we leave local data intact and retry next sign-in.
+      }
+
+      const { data, error } = await supabase
+        .from("user_collection_entries")
+        .select("squishy_id, status, added_at")
+        .eq("user_id", userId);
+      if (cancelled) return;
+      if (!error && data) {
+        const next: Entries = {};
+        for (const row of data) {
+          next[row.squishy_id] = { status: row.status, addedAt: row.added_at };
+        }
+        modeRef.current = userId;
+        setEntries(next);
+      }
+      setSyncing(false);
+    }
+
+    if (user) {
+      loadAccount(user.id);
+    } else {
+      modeRef.current = "local";
+      setEntries(localStore.load());
+      setSyncing(false);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const statusOf = useCallback(
     (squishyId: string) => entries[squishyId]?.status ?? null,
@@ -57,17 +130,46 @@ export function CollectionProvider({ children }: { children: React.ReactNode }) 
 
   // Toggling the current status removes the entry; setting the other status
   // moves it (an item is either owned or wished, never both).
-  const toggle = useCallback((squishyId: string, status: CollectionStatus) => {
-    setEntries((prev) => {
-      const next = { ...prev };
-      if (next[squishyId]?.status === status) {
+  const toggle = useCallback(
+    (squishyId: string, status: CollectionStatus) => {
+      const removing = entries[squishyId]?.status === status;
+      const prev = entries;
+      const next = { ...entries };
+      if (removing) {
         delete next[squishyId];
       } else {
         next[squishyId] = { status, addedAt: new Date().toISOString() };
       }
-      return next;
-    });
-  }, []);
+      setEntries(next);
+
+      if (user && supabase) {
+        const op = removing
+          ? supabase
+              .from("user_collection_entries")
+              .delete()
+              .eq("user_id", user.id)
+              .eq("squishy_id", squishyId)
+          : supabase
+              .from("user_collection_entries")
+              .upsert(
+                {
+                  user_id: user.id,
+                  squishy_id: squishyId,
+                  status,
+                  added_at: next[squishyId].addedAt,
+                },
+                { onConflict: "user_id,squishy_id" }
+              );
+        op.then(({ error }) => {
+          if (error) {
+            console.warn("Collection sync failed:", error.message);
+            setEntries(prev); // revert the optimistic update
+          }
+        });
+      }
+    },
+    [entries, user]
+  );
 
   const idsWithStatus = useCallback(
     (status: CollectionStatus) =>
@@ -79,8 +181,8 @@ export function CollectionProvider({ children }: { children: React.ReactNode }) 
   );
 
   const value = useMemo(
-    () => ({ entries, statusOf, toggle, idsWithStatus }),
-    [entries, statusOf, toggle, idsWithStatus]
+    () => ({ entries, syncing, statusOf, toggle, idsWithStatus }),
+    [entries, syncing, statusOf, toggle, idsWithStatus]
   );
 
   return <CollectionContext.Provider value={value}>{children}</CollectionContext.Provider>;
