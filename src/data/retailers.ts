@@ -19,7 +19,10 @@ export const retailers: Retailer[] = [
   { id: "amazon", name: "Amazon", category: "online-import", url: "https://www.amazon.com" },
   { id: "aliexpress", name: "AliExpress", category: "online-import", url: "https://www.aliexpress.com" },
   { id: "plaza-japan", name: "Plaza Japan", category: "online-import", url: "https://www.plazajapan.com" },
-  { id: "silly-squishies", name: "Silly Squishies", category: "online-import", url: "https://sillysquishies.com" },
+  // No url on purpose: sillysquishies.com is defunct and the domain now
+  // 301-redirects to an unrelated adult site (verified 2026-07-12). Keep the
+  // name for historical listings but never link it.
+  { id: "silly-squishies", name: "Silly Squishies", category: "online-import" },
   { id: "kawaii-factory", name: "Kawaii Factory", category: "online-import" },
 ];
 
