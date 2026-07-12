@@ -17,6 +17,8 @@ interface AuthContextValue {
   signIn(email: string, password: string): Promise<void>;
   signOut(): Promise<void>;
   requestPasswordReset(email: string): Promise<void>;
+  /** Scanner-proof reset: verify the emailed 6-digit code, then set the new password. */
+  resetWithCode(email: string, code: string, newPassword: string): Promise<void>;
   updatePassword(newPassword: string): Promise<void>;
   updateProfile(fields: { displayName?: string; avatarUrl?: string }): Promise<void>;
 }
@@ -138,6 +140,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [requireClient]
   );
 
+  const resetWithCode = useCallback(
+    async (email: string, code: string, newPassword: string) => {
+      const client = requireClient();
+      const { error: verifyError } = await client.auth.verifyOtp({
+        email: email.trim(),
+        token: code.trim(),
+        type: "recovery",
+      });
+      if (verifyError) throw new Error(verifyError.message);
+      const { error } = await client.auth.updateUser({ password: newPassword });
+      if (error) throw new Error(error.message);
+    },
+    [requireClient]
+  );
+
   const updatePassword = useCallback(
     async (newPassword: string) => {
       const client = requireClient();
@@ -175,10 +192,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signIn,
       signOut,
       requestPasswordReset,
+      resetWithCode,
       updatePassword,
       updateProfile,
     }),
-    [loading, user, session, signUp, signIn, signOut, requestPasswordReset, updatePassword, updateProfile]
+    [loading, user, session, signUp, signIn, signOut, requestPasswordReset, resetWithCode, updatePassword, updateProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

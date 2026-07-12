@@ -47,7 +47,7 @@ function NotConfigured() {
 }
 
 function AuthForms() {
-  const { signIn, signUp, requestPasswordReset } = useAuth();
+  const { signIn, signUp, requestPasswordReset, resetWithCode } = useAuth();
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -55,11 +55,18 @@ function AuthForms() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  // Forgot-password stage 2: the emailed 6-digit code + the new password.
+  const [resetSent, setResetSent] = useState(false);
+  const [resetCode, setResetCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
 
   const switchMode = (m: Mode) => {
     setMode(m);
     setError(null);
     setSuccess(null);
+    setResetSent(false);
+    setResetCode("");
+    setNewPassword("");
   };
 
   async function run(action: () => Promise<void>) {
@@ -79,31 +86,79 @@ function AuthForms() {
     return (
       <View style={styles.form}>
         <Text style={styles.formTitle}>Reset your password</Text>
-        <Text style={styles.body}>
-          Enter your account email and we'll send you a link to set a new password.
-        </Text>
-        <Field
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          autoComplete="email"
-          inputMode="email"
-          placeholder="you@example.com"
-        />
-        {error && <Note kind="error">{error}</Note>}
-        {success && <Note kind="success">{success}</Note>}
-        <PrimaryButton
-          label="Send reset link"
-          busy={busy}
-          disabled={!email.includes("@")}
-          onPress={() =>
-            run(async () => {
-              await requestPasswordReset(email);
-              setSuccess("Check your email for the reset link.");
-            })
-          }
-        />
+        {!resetSent ? (
+          <>
+            <Text style={styles.body}>
+              Enter your account email and we'll send you a reset email with a 6-digit code.
+            </Text>
+            <Field
+              label="Email"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              autoComplete="email"
+              inputMode="email"
+              placeholder="you@example.com"
+            />
+            {error && <Note kind="error">{error}</Note>}
+            <PrimaryButton
+              label="Send reset email"
+              busy={busy}
+              disabled={!email.includes("@")}
+              onPress={() =>
+                run(async () => {
+                  await requestPasswordReset(email);
+                  setResetSent(true);
+                })
+              }
+            />
+          </>
+        ) : (
+          <>
+            <Text style={styles.body}>
+              We emailed {email.trim()}. Enter the 6-digit code from that email and choose a new
+              password. (The email's link works too.)
+            </Text>
+            <Field
+              label="6-digit code"
+              value={resetCode}
+              onChangeText={setResetCode}
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="123456"
+            />
+            <Field
+              label="New password"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry
+              autoComplete="new-password"
+              placeholder="At least 6 characters"
+            />
+            {error && <Note kind="error">{error}</Note>}
+            {success && <Note kind="success">{success}</Note>}
+            <PrimaryButton
+              label="Set new password"
+              busy={busy}
+              disabled={resetCode.trim().length !== 6 || newPassword.length < 6}
+              onPress={() =>
+                run(async () => {
+                  await resetWithCode(email, resetCode, newPassword);
+                  setSuccess("Password updated — you're signed in.");
+                })
+              }
+            />
+            <LinkText
+              label="Didn't get it? Send again"
+              onPress={() =>
+                run(async () => {
+                  await requestPasswordReset(email);
+                  setSuccess("Sent again — check your email.");
+                })
+              }
+            />
+          </>
+        )}
         <LinkText label="Back to sign in" onPress={() => switchMode("signin")} />
       </View>
     );
