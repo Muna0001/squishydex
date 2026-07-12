@@ -43,6 +43,9 @@ export interface Squishy {
   emoji?: string;
   tint?: string; // pastel background hex for the placeholder
   dateAdded: string; // when added to the SquishyDex database (drives "new arrivals")
+  // Provenance for imported records (images are hotlinked + attributed):
+  sourceUrl?: string; // product page the record was imported from
+  imageSource?: string; // attribution label, e.g. "i-BLOOM official shop"
 }
 
 export type RetailerCategory = "mass" | "specialty" | "online-import";
@@ -61,6 +64,7 @@ export interface StockListing {
   inStock: boolean;
   lastChecked: string;
   price?: number;
+  currency?: string; // ISO code; undefined = USD
 }
 
 // Phase 1 persists only { status, addedAt } per squishy; the full entry

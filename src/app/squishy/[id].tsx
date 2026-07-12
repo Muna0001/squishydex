@@ -3,7 +3,7 @@ import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-na
 import { Stack, useLocalSearchParams } from "expo-router";
 import { CollectButtons } from "@/components/collect-buttons";
 import { SquishyImage } from "@/components/squishy-image";
-import { brandName, formatLabel, listingsForSquishy, squishyById } from "@/data";
+import { brandName, formatLabel, formatPrice, listingsForSquishy, squishyById } from "@/data";
 import { colors, MAX_CONTENT_WIDTH, radius } from "@/lib/theme";
 
 // Detail page. Hero action = collect/wishlist; facts and retailers
@@ -41,6 +41,17 @@ export default function SquishyDetailScreen() {
       <View style={styles.hero}>
         <SquishyImage squishy={squishy} emojiSize={96} />
       </View>
+      {squishy.imageSource && (
+        <Pressable
+          accessibilityRole={squishy.sourceUrl ? "link" : "none"}
+          onPress={squishy.sourceUrl ? () => Linking.openURL(squishy.sourceUrl!) : undefined}
+        >
+          <Text style={styles.attribution}>
+            Photo: {squishy.imageSource}
+            {squishy.sourceUrl ? " ↗" : ""}
+          </Text>
+        </Pressable>
+      )}
 
       <Text style={styles.name}>{squishy.name}</Text>
       <Text style={styles.brand}>{brandName(squishy.brandId)}</Text>
@@ -83,7 +94,7 @@ export default function SquishyDetailScreen() {
               </View>
               <View style={styles.listingRight}>
                 {listing.price != null && (
-                  <Text style={styles.price}>${listing.price.toFixed(2)}</Text>
+                  <Text style={styles.price}>{formatPrice(listing.price, listing.currency)}</Text>
                 )}
                 <View
                   style={[
@@ -126,6 +137,11 @@ const styles = StyleSheet.create({
     aspectRatio: 1.4,
     borderRadius: radius.card,
     overflow: "hidden",
+  },
+  attribution: {
+    fontSize: 12,
+    color: colors.faint,
+    marginTop: -8,
   },
   name: {
     fontSize: 26,

@@ -24,6 +24,8 @@ export const retailers: Retailer[] = [
   // name for historical listings but never link it.
   { id: "silly-squishies", name: "Silly Squishies", category: "online-import" },
   { id: "kawaii-factory", name: "Kawaii Factory", category: "online-import" },
+  { id: "i-bloom-shop", name: "i-BLOOM Official Shop", category: "online-import", url: "https://i-bloom.shop/en-us" },
+  { id: "squishy-japan", name: "Squishy Japan", category: "online-import", url: "https://squishy-japan.com" },
 ];
 
 export const retailerById = new Map(retailers.map((r) => [r.id, r]));

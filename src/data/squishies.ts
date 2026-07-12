@@ -189,4 +189,3 @@ export const squishies: Squishy[] = [
   },
 ];
 
-export const squishyById = new Map(squishies.map((s) => [s.id, s]));
