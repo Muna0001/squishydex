@@ -32,6 +32,7 @@ export interface Squishy {
   id: string;
   name: string;
   brandId: string;
+  brandLabel?: string; // display override for user-submitted "new" brands not in the brands table
   type: SquishyType;
   size: SquishySize;
   scent?: string; // e.g. "strawberry", "unscented"

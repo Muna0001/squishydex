@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { Chip } from "@/components/chip";
 import { EmptyState } from "@/components/empty-state";
 import { SquishyCard } from "@/components/squishy-card";
@@ -15,11 +16,10 @@ import { SquishyGrid } from "@/components/squishy-grid";
 import {
   brandsWithItems,
   formatLabel,
-  newArrivals,
-  searchSquishies,
   sizesWithItems,
   typesWithItems,
 } from "@/data";
+import { useCatalog } from "@/lib/catalog";
 import { colors, radius } from "@/lib/theme";
 import type { SquishySize, SquishyType } from "@/lib/types";
 
@@ -27,6 +27,8 @@ import type { SquishySize, SquishyType } from "@/lib/types";
 // only in the default (unfiltered) state; filters stay collapsed until
 // asked for — progressive disclosure over a wall of controls.
 export default function BrowseScreen() {
+  const catalog = useCatalog();
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [brandId, setBrandId] = useState<string | null>(null);
@@ -37,8 +39,8 @@ export default function BrowseScreen() {
   const isFiltering = query.trim().length > 0 || filterCount > 0;
 
   const results = useMemo(
-    () => searchSquishies(query, { brandId, type, size }),
-    [query, brandId, type, size]
+    () => catalog.search(query, { brandId, type, size }),
+    [catalog, query, brandId, type, size]
   );
 
   const clearFilters = () => {
@@ -78,6 +80,13 @@ export default function BrowseScreen() {
             <Text style={styles.clearText}>Clear</Text>
           </Pressable>
         )}
+        <View style={{ flex: 1 }} />
+        <Pressable accessibilityRole="link" onPress={() => router.push("/scan")}>
+          <Text style={styles.headerAction}>📷 Scan</Text>
+        </Pressable>
+        <Pressable accessibilityRole="link" onPress={() => router.push("/submit")}>
+          <Text style={styles.headerAction}>＋ Add</Text>
+        </Pressable>
       </View>
 
       {filtersOpen && (
@@ -120,7 +129,7 @@ export default function BrowseScreen() {
           <Text style={styles.sectionTitle}>New arrivals</Text>
           <FlatList
             horizontal
-            data={newArrivals(6)}
+            data={catalog.newest(6)}
             keyExtractor={(s) => s.id}
             renderItem={({ item }) => (
               <View style={styles.railCard}>
@@ -217,6 +226,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: colors.wish,
+  },
+  headerAction: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.ink,
+    paddingVertical: 4,
+    paddingLeft: 8,
   },
   filterPanel: {
     backgroundColor: colors.card,

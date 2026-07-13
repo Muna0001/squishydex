@@ -23,6 +23,31 @@ export function brandName(brandId: string): string {
   return brandById.get(brandId)?.name ?? "Unknown brand";
 }
 
+// Display brand for any squishy, including user-submitted new brands.
+export function brandLabelOf(squishy: Squishy): string {
+  return squishy.brandLabel ?? brandName(squishy.brandId);
+}
+
+// One squishy against one query+filter set — shared by catalog search and
+// user-submission search so both behave identically.
+export function matchesSquishy(s: Squishy, query: string, filters: SearchFilters = {}): boolean {
+  if (filters.brandId && s.brandId !== filters.brandId) return false;
+  if (filters.type && s.type !== filters.type) return false;
+  if (filters.size && s.size !== filters.size) return false;
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const haystack = [
+    s.name,
+    brandLabelOf(s),
+    s.type.replace(/-/g, " "),
+    s.scent ?? "",
+    s.licensedProperty ?? "",
+  ]
+    .join(" ")
+    .toLowerCase();
+  return q.split(/\s+/).every((word) => haystack.includes(word));
+}
+
 export interface ListingWithRetailer {
   listing: StockListing;
   retailer: Retailer;
@@ -50,23 +75,7 @@ export interface SearchFilters {
 
 // Search by name, brand name, type, scent, or licensed property.
 export function searchSquishies(query: string, filters: SearchFilters = {}): Squishy[] {
-  const q = query.trim().toLowerCase();
-  return squishies.filter((s) => {
-    if (filters.brandId && s.brandId !== filters.brandId) return false;
-    if (filters.type && s.type !== filters.type) return false;
-    if (filters.size && s.size !== filters.size) return false;
-    if (!q) return true;
-    const haystack = [
-      s.name,
-      brandName(s.brandId),
-      s.type.replace(/-/g, " "),
-      s.scent ?? "",
-      s.licensedProperty ?? "",
-    ]
-      .join(" ")
-      .toLowerCase();
-    return q.split(/\s+/).every((word) => haystack.includes(word));
-  });
+  return squishies.filter((s) => matchesSquishy(s, query, filters));
 }
 
 // Only offer brand filters for brands that actually have items in the catalog.

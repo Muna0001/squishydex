@@ -1,9 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { CollectButtons } from "@/components/collect-buttons";
 import { SquishyImage } from "@/components/squishy-image";
-import { brandName, formatLabel, formatPrice, listingsForSquishy, squishyById } from "@/data";
+import { brandLabelOf, formatLabel, formatPrice, listingsForSquishy } from "@/data";
+import { useAuth } from "@/lib/auth";
+import { useCatalog } from "@/lib/catalog";
+import { useSubmissions } from "@/lib/submissions";
 import { colors, MAX_CONTENT_WIDTH, radius } from "@/lib/theme";
 
 // Detail page. Hero action = collect/wishlist; facts and retailers
@@ -11,7 +14,13 @@ import { colors, MAX_CONTENT_WIDTH, radius } from "@/lib/theme";
 // do I have it → where can I get it.
 export default function SquishyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const squishy = squishyById.get(id ?? "");
+  const catalog = useCatalog();
+  const { metaById, flag } = useSubmissions();
+  const { user } = useAuth();
+  const [flagged, setFlagged] = useState(false);
+  const [confirmFlag, setConfirmFlag] = useState(false);
+  const squishy = catalog.resolve(id ?? "");
+  const submittedMeta = id ? metaById.get(id) : undefined;
 
   if (!squishy) {
     return (
@@ -54,7 +63,12 @@ export default function SquishyDetailScreen() {
       )}
 
       <Text style={styles.name}>{squishy.name}</Text>
-      <Text style={styles.brand}>{brandName(squishy.brandId)}</Text>
+      <Text style={styles.brand}>{brandLabelOf(squishy)}</Text>
+      {submittedMeta && (
+        <Text style={styles.submittedBy}>
+          Submitted by {submittedMeta.submittedByName} 🤝
+        </Text>
+      )}
 
       <CollectButtons squishyId={squishy.id} />
 
@@ -67,10 +81,35 @@ export default function SquishyDetailScreen() {
         ))}
       </View>
 
+      {submittedMeta && user && (
+        <View style={styles.flagRow}>
+          {flagged ? (
+            <Text style={styles.flagThanks}>
+              Thanks — this item is flagged and hidden from browse.
+            </Text>
+          ) : confirmFlag ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => flag(squishy.id).then(() => setFlagged(true)).catch(() => {})}
+            >
+              <Text style={styles.flagConfirm}>
+                Tap again to confirm — flag as spam, duplicate, or wrong info
+              </Text>
+            </Pressable>
+          ) : (
+            <Pressable accessibilityRole="button" onPress={() => setConfirmFlag(true)}>
+              <Text style={styles.flagText}>🚩 Report a problem with this item</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
+
       <Text style={styles.sectionTitle}>Where to find it</Text>
       {listings.length === 0 ? (
         <Text style={styles.noListings}>
-          No known retailers yet — check back as the database grows.
+          {submittedMeta
+            ? "Community-submitted item — no retailer listings yet."
+            : "No known retailers yet — check back as the database grows."}
         </Text>
       ) : (
         <View style={styles.listingCard}>
@@ -152,6 +191,28 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.muted,
     marginTop: -8,
+  },
+  submittedBy: {
+    fontSize: 13,
+    color: colors.faint,
+    marginTop: -6,
+  },
+  flagRow: {
+    paddingVertical: 2,
+  },
+  flagText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.muted,
+  },
+  flagConfirm: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.wish,
+  },
+  flagThanks: {
+    fontSize: 13,
+    color: colors.owned,
   },
   factCard: {
     backgroundColor: colors.card,

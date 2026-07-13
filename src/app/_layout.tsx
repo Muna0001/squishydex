@@ -1,11 +1,13 @@
 import { Stack } from "expo-router";
 import { AuthProvider } from "@/lib/auth";
 import { CollectionProvider } from "@/lib/store";
+import { SubmissionsProvider } from "@/lib/submissions";
 import { colors } from "@/lib/theme";
 
 export default function RootLayout() {
   return (
     <AuthProvider>
+      <SubmissionsProvider>
       <CollectionProvider>
       <Stack
         screenOptions={{
@@ -18,9 +20,13 @@ export default function RootLayout() {
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="squishy/[id]" options={{ title: "" }} />
+        <Stack.Screen name="friend/[id]" options={{ title: "" }} />
+        <Stack.Screen name="submit" options={{ title: "Add a product" }} />
+        <Stack.Screen name="scan" options={{ title: "Scan a barcode" }} />
         <Stack.Screen name="reset-password" options={{ title: "Reset password" }} />
       </Stack>
       </CollectionProvider>
+      </SubmissionsProvider>
     </AuthProvider>
   );
 }

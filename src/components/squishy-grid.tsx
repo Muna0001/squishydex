@@ -10,10 +10,12 @@ export function SquishyGrid({
   items,
   header,
   empty,
+  readOnly = false,
 }: {
   items: Squishy[];
   header?: React.ReactElement;
   empty?: React.ReactElement;
+  readOnly?: boolean;
 }) {
   const { width } = useWindowDimensions();
   const contentWidth = Math.min(width, MAX_CONTENT_WIDTH);
@@ -29,7 +31,7 @@ export function SquishyGrid({
         // Cap each cell at its column share so a lone item in the last
         // row doesn't stretch into a giant full-width card.
         <View style={{ flex: 1, maxWidth: `${100 / numColumns}%` }}>
-          <SquishyCard squishy={item} />
+          <SquishyCard squishy={item} readOnly={readOnly} />
         </View>
       )}
       columnWrapperStyle={styles.row}

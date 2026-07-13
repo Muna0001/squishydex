@@ -1,7 +1,7 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { brandName } from "@/data";
+import { brandLabelOf } from "@/data";
 import { colors, radius } from "@/lib/theme";
 import type { Squishy } from "@/lib/types";
 import { CollectButtons } from "./collect-buttons";
@@ -9,8 +9,9 @@ import { SquishyImage } from "./squishy-image";
 
 // Grid card: image, name, brand — tap anywhere to open the detail page.
 // Compact collect/wishlist pills live at the bottom so the core loop
-// (see it → save it) never requires leaving the grid.
-export function SquishyCard({ squishy }: { squishy: Squishy }) {
+// (see it → save it) never requires leaving the grid. readOnly drops the
+// pills — used when viewing someone else's collection.
+export function SquishyCard({ squishy, readOnly = false }: { squishy: Squishy; readOnly?: boolean }) {
   const router = useRouter();
   return (
     <View style={styles.card}>
@@ -27,10 +28,10 @@ export function SquishyCard({ squishy }: { squishy: Squishy }) {
           {squishy.name}
         </Text>
         <Text style={styles.brand} numberOfLines={1}>
-          {brandName(squishy.brandId)}
+          {brandLabelOf(squishy)}
         </Text>
       </Pressable>
-      <CollectButtons squishyId={squishy.id} compact />
+      {!readOnly && <CollectButtons squishyId={squishy.id} compact />}
     </View>
   );
 }

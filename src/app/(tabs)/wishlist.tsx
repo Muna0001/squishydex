@@ -3,14 +3,15 @@ import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { EmptyState } from "@/components/empty-state";
 import { SquishyGrid } from "@/components/squishy-grid";
-import { squishyById } from "@/data";
+import { useCatalog } from "@/lib/catalog";
 import { useCollection } from "@/lib/store";
 import { colors } from "@/lib/theme";
 
 export default function WishlistScreen() {
   const { idsWithStatus } = useCollection();
+  const catalog = useCatalog();
   const items = idsWithStatus("wishlist")
-    .map((id) => squishyById.get(id))
+    .map((id) => catalog.resolve(id))
     .filter((s) => s !== undefined);
 
   return (
