@@ -34,6 +34,7 @@ export const brands: Brand[] = [
   { id: "edntoy", name: "EDNTOY", category: "blind-bag" }, // TODO(spelling)
   { id: "chiboki", name: "Chiboki", category: "blind-bag" }, // TODO(spelling)
   { id: "puka-creations", name: "Puka Creations", category: "blind-bag" }, // TODO(spelling)
+  { id: "tansix", name: "Tansix", category: "blind-bag" },
 
   // Licensed / novelty food
   { id: "kool-aid", name: "Kool-Aid", category: "novelty-licensed" },

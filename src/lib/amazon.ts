@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import type { Squishy } from "./types";
-import { brandLabelOf } from "@/data";
+import { brandLabelOf, stockListings } from "@/data";
 
-// "Buy on Amazon" link resolution. The affiliate-tracked URL comes from
-// the amazon_product_cache table, which scripts/refresh-amazon.mjs fills
-// via the Creator API (credentials live in env, never in the client).
-// Until an item is cached — or if the API is ever down — we fall back to
-// a plain Amazon search so the button is never a dead end.
+// "Buy on Amazon" link resolution, best source first:
+//   1. amazon_product_cache (Creator API via scripts/refresh-amazon.mjs)
+//   2. a hand-entered affiliate deep link on the item's Amazon stock
+//      listing (amzn.to short links carry the tag already)
+//   3. a plain Amazon search — the button is never a dead end.
 
 export interface AmazonLink {
   url: string;
@@ -29,7 +29,12 @@ export function useAmazonLink(squishy: Squishy | undefined): AmazonLink | null {
     setLink(null);
     if (!squishy?.amazonAsin) return;
 
-    const fallback: AmazonLink = { url: searchFallbackUrl(squishy), tracked: false };
+    const listing = stockListings.find(
+      (l) => l.squishyId === squishy.id && l.retailerId === "amazon" && l.url
+    );
+    const fallback: AmazonLink = listing?.url
+      ? { url: listing.url, tracked: true, price: listing.price, currency: listing.currency }
+      : { url: searchFallbackUrl(squishy), tracked: false };
     if (!supabase) {
       setLink(fallback);
       return;

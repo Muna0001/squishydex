@@ -40,4 +40,12 @@ export const stockListings: StockListing[] = [
   { id: "sl-26", squishyId: "squishmallows-cam-the-cat", retailerId: "barnes-noble", inStock: false, price: 13.5, lastChecked: "2026-07-09" },
   { id: "sl-27", squishyId: "top-trenz-sugar-donut", retailerId: "itsugar", inStock: true, price: 9.99, lastChecked: "2026-07-10" },
   { id: "sl-28", squishyId: "top-trenz-sugar-donut", retailerId: "learning-express", inStock: true, price: 10.99, lastChecked: "2026-07-08" },
+
+  // Amazon affiliate listings (Nate's tagged amzn.to links), verified
+  // in-stock on amazon.com 2026-07-14.
+  { id: "sl-29", squishyId: "needoh-color-changing", retailerId: "amazon", inStock: true, price: 40.0, lastChecked: "2026-07-14", url: "https://amzn.to/3T0B5k8" },
+  { id: "sl-30", squishyId: "needoh-fuzz-ball-wonder-waves", retailerId: "amazon", inStock: true, price: 39.98, lastChecked: "2026-07-14", url: "https://amzn.to/4ppJXvN" },
+  { id: "sl-31", squishyId: "needoh-gummy-bear-purple", retailerId: "amazon", inStock: true, price: 29.99, lastChecked: "2026-07-14", url: "https://amzn.to/4fiv6yH" },
+  { id: "sl-32", squishyId: "needoh-worlds-smallest", retailerId: "amazon", inStock: true, price: 22.6, lastChecked: "2026-07-14", url: "https://amzn.to/3SR9L81" },
+  { id: "sl-33", squishyId: "tansix-dumpling-mystery", retailerId: "amazon", inStock: true, price: 16.13, lastChecked: "2026-07-14", url: "https://amzn.to/4gErTf0" },
 ];

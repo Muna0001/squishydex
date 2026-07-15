@@ -72,6 +72,7 @@ export interface StockListing {
   lastChecked: string;
   price?: number;
   currency?: string; // ISO code; undefined = USD
+  url?: string; // product-page deep link (e.g. affiliate amzn.to); falls back to retailer.url
 }
 
 export interface User {

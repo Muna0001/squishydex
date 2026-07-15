@@ -131,21 +131,25 @@ export default function SquishyDetailScreen() {
         </Text>
       ) : (
         <View style={styles.listingCard}>
-          {listings.map(({ listing, retailer }, i) => (
+          {listings.map(({ listing, retailer }, i) => {
+            // Listing-level deep link (e.g. affiliate product page) beats
+            // the retailer's storefront link.
+            const href = listing.url ?? retailer.url;
+            return (
             <Pressable
               key={listing.id}
-              accessibilityRole={retailer.url ? "link" : "none"}
-              onPress={retailer.url ? () => Linking.openURL(retailer.url!) : undefined}
+              accessibilityRole={href ? "link" : "none"}
+              onPress={href ? () => Linking.openURL(href) : undefined}
               style={({ pressed }) => [
                 styles.listingRow,
                 i > 0 && styles.listingDivider,
-                pressed && retailer.url ? { opacity: 0.7 } : null,
+                pressed && href ? { opacity: 0.7 } : null,
               ]}
             >
               <View style={styles.listingLeft}>
                 <Text style={styles.retailerName}>
                   {retailer.name}
-                  {retailer.url ? " ↗" : ""}
+                  {href ? " ↗" : ""}
                 </Text>
                 <Text style={styles.lastChecked}>Checked {listing.lastChecked}</Text>
               </View>
@@ -170,7 +174,8 @@ export default function SquishyDetailScreen() {
                 </View>
               </View>
             </Pressable>
-          ))}
+            );
+          })}
         </View>
       )}
     </ScrollView>
