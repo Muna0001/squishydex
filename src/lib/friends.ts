@@ -65,13 +65,50 @@ export async function listFriendships(selfId: string): Promise<FriendshipView[]>
   });
 }
 
+// Look up the friendship row between two users regardless of direction.
+async function findExistingFriendship(selfId: string, otherId: string) {
+  const { data, error } = await supabase!
+    .from("friendships")
+    .select("id, status, requester_id")
+    .or(
+      `and(requester_id.eq.${selfId},addressee_id.eq.${otherId}),and(requester_id.eq.${otherId},addressee_id.eq.${selfId})`
+    )
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+// A friendship is one relationship regardless of who asked first. If the
+// other person already sent us a request, accept theirs instead of
+// creating a mirror row; a DB unique index on the unordered pair backstops
+// the race where both requests land in the same instant.
 export async function sendFriendRequest(selfId: string, addresseeId: string): Promise<void> {
   if (!supabase) throw new Error("Not configured.");
+
+  const existing = await findExistingFriendship(selfId, addresseeId);
+  if (existing) {
+    if (existing.status === "accepted") throw new Error("You're already friends.");
+    if (existing.requester_id === addresseeId) {
+      // They asked first — this "request" is really an acceptance.
+      await acceptFriendRequest(existing.id);
+      return;
+    }
+    throw new Error("You've already sent them a request.");
+  }
+
   const { error } = await supabase
     .from("friendships")
     .insert({ requester_id: selfId, addressee_id: addresseeId, status: "pending" });
   if (error) {
-    if (error.code === "23505") throw new Error("There's already a request between you two.");
+    if (error.code === "23505") {
+      // Lost the race: their request landed between our check and insert.
+      const theirs = await findExistingFriendship(selfId, addresseeId);
+      if (theirs && theirs.status === "pending" && theirs.requester_id === addresseeId) {
+        await acceptFriendRequest(theirs.id);
+        return;
+      }
+      throw new Error("There's already a request between you two.");
+    }
     throw new Error(error.message);
   }
 }

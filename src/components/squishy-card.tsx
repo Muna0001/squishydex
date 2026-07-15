@@ -5,13 +5,23 @@ import { brandLabelOf } from "@/data";
 import { colors, radius } from "@/lib/theme";
 import type { Squishy } from "@/lib/types";
 import { CollectButtons } from "./collect-buttons";
+import { QuantityStepper } from "./quantity-stepper";
 import { SquishyImage } from "./squishy-image";
 
 // Grid card: image, name, brand — tap anywhere to open the detail page.
 // Compact collect/wishlist pills live at the bottom so the core loop
 // (see it → save it) never requires leaving the grid. readOnly drops the
-// pills — used when viewing someone else's collection.
-export function SquishyCard({ squishy, readOnly = false }: { squishy: Squishy; readOnly?: boolean }) {
+// pills (viewing someone else's collection); withQuantity swaps them for
+// the copies-owned stepper (own collection screen).
+export function SquishyCard({
+  squishy,
+  readOnly = false,
+  withQuantity = false,
+}: {
+  squishy: Squishy;
+  readOnly?: boolean;
+  withQuantity?: boolean;
+}) {
   const router = useRouter();
   return (
     <View style={styles.card}>
@@ -31,7 +41,12 @@ export function SquishyCard({ squishy, readOnly = false }: { squishy: Squishy; r
           {brandLabelOf(squishy)}
         </Text>
       </Pressable>
-      {!readOnly && <CollectButtons squishyId={squishy.id} compact />}
+      {!readOnly &&
+        (withQuantity ? (
+          <QuantityStepper squishyId={squishy.id} />
+        ) : (
+          <CollectButtons squishyId={squishy.id} compact />
+        ))}
     </View>
   );
 }

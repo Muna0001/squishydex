@@ -8,22 +8,27 @@ import { useCollection } from "@/lib/store";
 import { colors } from "@/lib/theme";
 
 export default function CollectionScreen() {
-  const { idsWithStatus } = useCollection();
+  const { idsWithStatus, quantityOf } = useCollection();
   const catalog = useCatalog();
-  const items = idsWithStatus("owned")
+  const ownedIds = idsWithStatus("owned");
+  const items = ownedIds
     .map((id) => catalog.resolve(id))
     .filter((s) => s !== undefined);
+  // Collectors keep duplicates — count copies, not just distinct items.
+  const totalCopies = ownedIds.reduce((sum, id) => sum + quantityOf(id), 0);
 
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
       <SquishyGrid
         items={items}
+        withQuantity
         header={
           <View style={styles.header}>
             <Text style={styles.title}>My Collection</Text>
             {items.length > 0 && (
               <Text style={styles.count}>
-                {items.length} squish{items.length === 1 ? "y" : "ies"}
+                {totalCopies} squish{totalCopies === 1 ? "y" : "ies"}
+                {totalCopies !== items.length ? ` (${items.length} unique)` : ""}
               </Text>
             )}
           </View>

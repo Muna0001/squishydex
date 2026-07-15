@@ -40,6 +40,7 @@ export interface Squishy {
   releaseDate?: string;
   barcode?: string; // for scanner lookups later
   licensedProperty?: string; // e.g. "Sanrio", "Disney"
+  amazonAsin?: string; // manual ASIN match → "Buy on Amazon" affiliate link
   // Placeholder art until real images exist:
   emoji?: string;
   tint?: string; // pastel background hex for the placeholder
@@ -56,6 +57,11 @@ export interface Retailer {
   name: string;
   category: RetailerCategory;
   url?: string;
+  // Placeholder for future affiliate programs (only Amazon is affiliate
+  // today, via the Creator API — see scripts/refresh-amazon.mjs). When a
+  // retailer joins a program, set e.g. "https://…?u={url}&tag=…" here and
+  // link-building becomes a config change, not a rebuild.
+  affiliateUrlTemplate?: string;
 }
 
 export interface StockListing {
@@ -94,6 +100,7 @@ export interface UserCollectionEntry {
   userId: string;
   squishyId: string;
   status: CollectionStatus;
+  quantity?: number; // how many copies owned (default 1; only meaningful when owned)
   condition?: "new-with-packaging" | "out-of-packaging" | "loved";
   pricePaid?: number;
   dateAcquired?: string;

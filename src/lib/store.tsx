@@ -13,6 +13,7 @@ import type { CollectionStatus } from "./types";
 interface StoredEntry {
   status: CollectionStatus;
   addedAt: string;
+  quantity?: number; // copies owned; undefined = 1 (pre-quantity entries)
 }
 
 type Entries = Record<string, StoredEntry>;
@@ -53,6 +54,9 @@ interface CollectionContextValue {
   statusOf(squishyId: string): CollectionStatus | null;
   toggle(squishyId: string, status: CollectionStatus): void;
   idsWithStatus(status: CollectionStatus): string[];
+  quantityOf(squishyId: string): number;
+  /** Set copies owned; qty 0 removes the entry entirely. */
+  setQuantity(squishyId: string, qty: number): void;
 }
 
 const CollectionContext = createContext<CollectionContextValue | null>(null);
@@ -87,6 +91,7 @@ export function CollectionProvider({ children }: { children: React.ReactNode }) 
           squishy_id: squishyId,
           status: local[squishyId].status,
           added_at: local[squishyId].addedAt,
+          quantity: local[squishyId].quantity ?? 1,
         }));
         const { error } = await supabase
           .from("user_collection_entries")
@@ -97,13 +102,17 @@ export function CollectionProvider({ children }: { children: React.ReactNode }) 
 
       const { data, error } = await supabase
         .from("user_collection_entries")
-        .select("squishy_id, status, added_at")
+        .select("squishy_id, status, added_at, quantity")
         .eq("user_id", userId);
       if (cancelled) return;
       if (!error && data) {
         const next: Entries = {};
         for (const row of data) {
-          next[row.squishy_id] = { status: row.status, addedAt: row.added_at };
+          next[row.squishy_id] = {
+            status: row.status,
+            addedAt: row.added_at,
+            quantity: row.quantity ?? 1,
+          };
         }
         modeRef.current = userId;
         setEntries(next);
@@ -138,7 +147,7 @@ export function CollectionProvider({ children }: { children: React.ReactNode }) 
       if (removing) {
         delete next[squishyId];
       } else {
-        next[squishyId] = { status, addedAt: new Date().toISOString() };
+        next[squishyId] = { status, addedAt: new Date().toISOString(), quantity: 1 };
       }
       setEntries(next);
 
@@ -157,6 +166,7 @@ export function CollectionProvider({ children }: { children: React.ReactNode }) 
                   squishy_id: squishyId,
                   status,
                   added_at: next[squishyId].addedAt,
+                  quantity: 1,
                 },
                 { onConflict: "user_id,squishy_id" }
               );
@@ -164,6 +174,48 @@ export function CollectionProvider({ children }: { children: React.ReactNode }) 
           if (error) {
             console.warn("Collection sync failed:", error.message);
             setEntries(prev); // revert the optimistic update
+          }
+        });
+      }
+    },
+    [entries, user]
+  );
+
+  const quantityOf = useCallback(
+    (squishyId: string) => entries[squishyId]?.quantity ?? 1,
+    [entries]
+  );
+
+  const setQuantity = useCallback(
+    (squishyId: string, qty: number) => {
+      const entry = entries[squishyId];
+      if (!entry || entry.status !== "owned") return;
+      const prev = entries;
+      const next = { ...entries };
+      if (qty < 1) {
+        delete next[squishyId];
+      } else {
+        next[squishyId] = { ...entry, quantity: qty };
+      }
+      setEntries(next);
+
+      if (user && supabase) {
+        const op =
+          qty < 1
+            ? supabase
+                .from("user_collection_entries")
+                .delete()
+                .eq("user_id", user.id)
+                .eq("squishy_id", squishyId)
+            : supabase
+                .from("user_collection_entries")
+                .update({ quantity: qty })
+                .eq("user_id", user.id)
+                .eq("squishy_id", squishyId);
+        op.then(({ error }) => {
+          if (error) {
+            console.warn("Quantity sync failed:", error.message);
+            setEntries(prev);
           }
         });
       }
@@ -181,8 +233,8 @@ export function CollectionProvider({ children }: { children: React.ReactNode }) 
   );
 
   const value = useMemo(
-    () => ({ entries, syncing, statusOf, toggle, idsWithStatus }),
-    [entries, syncing, statusOf, toggle, idsWithStatus]
+    () => ({ entries, syncing, statusOf, toggle, idsWithStatus, quantityOf, setQuantity }),
+    [entries, syncing, statusOf, toggle, idsWithStatus, quantityOf, setQuantity]
   );
 
   return <CollectionContext.Provider value={value}>{children}</CollectionContext.Provider>;
