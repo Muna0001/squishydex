@@ -4,9 +4,10 @@
  *
  * Collects every amazonAsin in the catalog, looks each one up, and
  * upserts { asin, tracked_url, price, currency, image_url, refreshed_at }.
- * The app reads this cache (see src/lib/amazon.ts) instead of calling
- * Amazon per page view — the Creator API's rate limits are tied to
- * qualified sales volume, so calls are precious.
+ * The cache feeds the item detail page's Amazon stock-listing row
+ * (price/in-stock refresh + official image) — the single tap-to-buy
+ * affordance. Cached rather than per-page-view because the Creator API's
+ * rate limits are tied to qualified sales volume, so calls are precious.
  *
  * Credentials come from .env (NEVER commit them; .env is gitignored):
  *   AMAZON_CREDENTIAL_ID=...        Associates Central → Tools → Creators API

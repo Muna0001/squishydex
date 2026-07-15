@@ -4,7 +4,6 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import { CollectButtons } from "@/components/collect-buttons";
 import { SquishyImage } from "@/components/squishy-image";
 import { brandLabelOf, formatLabel, formatPrice, listingsForSquishy } from "@/data";
-import { useAmazonLink } from "@/lib/amazon";
 import { useAuth } from "@/lib/auth";
 import { useCatalog } from "@/lib/catalog";
 import { useSubmissions } from "@/lib/submissions";
@@ -22,7 +21,6 @@ export default function SquishyDetailScreen() {
   const [confirmFlag, setConfirmFlag] = useState(false);
   const squishy = catalog.resolve(id ?? "");
   const submittedMeta = id ? metaById.get(id) : undefined;
-  const amazonLink = useAmazonLink(squishy);
 
   if (!squishy) {
     return (
@@ -104,22 +102,6 @@ export default function SquishyDetailScreen() {
             </Pressable>
           )}
         </View>
-      )}
-
-      {amazonLink && (
-        <Pressable
-          accessibilityRole="link"
-          onPress={() => Linking.openURL(amazonLink.url)}
-          style={({ pressed }) => [styles.amazonButton, pressed && { opacity: 0.85 }]}
-        >
-          <Text style={styles.amazonButtonText}>
-            🛒 Buy on Amazon
-            {amazonLink.tracked && amazonLink.price != null
-              ? ` — ${formatPrice(amazonLink.price, amazonLink.currency)}`
-              : ""}
-          </Text>
-          {!amazonLink.tracked && <Text style={styles.amazonSub}>search results</Text>}
-        </Pressable>
       )}
 
       <Text style={styles.sectionTitle}>Where to find it</Text>
@@ -265,25 +247,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.ink,
     marginTop: 8,
-  },
-  amazonButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#FFD814",
-    borderRadius: radius.pill,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-  },
-  amazonButtonText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#1A171E",
-  },
-  amazonSub: {
-    fontSize: 12,
-    color: "#6B655E",
   },
   noListings: {
     fontSize: 14,
