@@ -17,12 +17,25 @@
  * imageSource so images stay attributed to where they came from.
  */
 
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const OUT_PATH = join(dirname(fileURLToPath(import.meta.url)), "../src/data/imported.ts");
 const TODAY = new Date().toISOString().slice(0, 10);
+
+// Preserve each item's original dateAdded across re-runs so a daily
+// refresh doesn't flood "New arrivals" with everything at once.
+const previousDates = new Map();
+try {
+  const prev = readFileSync(OUT_PATH, "utf8");
+  for (const m of prev.matchAll(/"id":\s*"([^"]+)"[\s\S]{0,600}?"dateAdded":\s*"([^"]+)"/g)) {
+    previousDates.set(m[1], m[2]);
+  }
+} catch {
+  // First run — everything is genuinely new today.
+}
+const dateAddedFor = (id) => previousDates.get(id) ?? TODAY;
 
 // Obvious non-squishy merch in the feeds (stationery, apparel, etc.)
 const SKIP_WORDS = /sticker|towel|tote|tape|postcard|notebook|poster|t-shirt|tshirt|acrylic|badge|lanyard/i;
@@ -94,7 +107,7 @@ async function importIbloom() {
         releaseDate: p.published_at ? p.published_at.slice(0, 10) : undefined,
         sourceUrl: `https://i-bloom.shop/en-us/products/${p.handle}`,
         imageSource: "i-BLOOM official shop",
-        dateAdded: TODAY,
+        dateAdded: dateAddedFor(id),
       });
       if (variant?.price != null) {
         listings.push({
@@ -151,7 +164,7 @@ async function importSquishyJapan() {
         imageUrl: image,
         sourceUrl: p.permalink,
         imageSource: "Squishy Japan",
-        dateAdded: TODAY,
+        dateAdded: dateAddedFor(id),
       });
       // Variable products report price 0 in the list feed — omit rather
       // than show a bogus ¥0.

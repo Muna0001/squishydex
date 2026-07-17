@@ -7,6 +7,8 @@ function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
   return <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.45 }}>{emoji}</Text>;
 }
 
+// Five tabs; three of them are stacks ((home), (social), (me)) so their
+// sub-screens keep the bottom nav. Group names never appear in URLs.
 export default function TabsLayout() {
   return (
     <Tabs
@@ -22,7 +24,7 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="(home)"
         options={{
           title: "Browse",
           tabBarIcon: ({ focused }) => <TabIcon emoji="🧸" focused={focused} />,
@@ -43,14 +45,14 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="friends"
+        name="(social)"
         options={{
           title: "Friends",
           tabBarIcon: ({ focused }) => <TabIcon emoji="👥" focused={focused} />,
         }}
       />
       <Tabs.Screen
-        name="account"
+        name="(me)"
         options={{
           title: "Account",
           tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} />,

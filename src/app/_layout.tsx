@@ -11,19 +11,11 @@ export default function RootLayout() {
       <CollectionProvider>
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: colors.bg },
-          headerTintColor: colors.ink,
-          headerTitleStyle: { fontWeight: "700" },
-          headerShadowVisible: false,
+          headerShown: false,
           contentStyle: { backgroundColor: colors.bg },
         }}
       >
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="squishy/[id]" options={{ title: "" }} />
-        <Stack.Screen name="friend/[id]" options={{ title: "" }} />
-        <Stack.Screen name="submit" options={{ title: "Add a product" }} />
-        <Stack.Screen name="scan" options={{ title: "Scan a barcode" }} />
-        <Stack.Screen name="reset-password" options={{ title: "Reset password" }} />
+        <Stack.Screen name="(tabs)" />
       </Stack>
       </CollectionProvider>
       </SubmissionsProvider>

@@ -1,3 +1,4 @@
+import { amazonStock } from "./amazon-stock";
 import { brandById, brands } from "./brands";
 import { importedSquishies, importedStockListings } from "./imported";
 import { retailerById, retailers } from "./retailers";
@@ -54,9 +55,23 @@ export interface ListingWithRetailer {
 }
 
 export function listingsForSquishy(squishyId: string): ListingWithRetailer[] {
+  const asin = squishyById.get(squishyId)?.amazonAsin;
   return stockListings
     .filter((l) => l.squishyId === squishyId)
-    .map((listing) => ({ listing, retailer: retailerById.get(listing.retailerId)! }))
+    .map((listing) => {
+      // Overlay the daily Amazon availability check onto Amazon listings
+      // (price only overrides when the check captured one confidently).
+      const live = listing.retailerId === "amazon" && asin ? amazonStock[asin] : undefined;
+      const merged = live
+        ? {
+            ...listing,
+            inStock: live.inStock,
+            lastChecked: live.lastChecked,
+            ...(live.price != null ? { price: live.price } : {}),
+          }
+        : listing;
+      return { listing: merged, retailer: retailerById.get(listing.retailerId)! };
+    })
     .filter((x) => x.retailer)
     .sort((a, b) => Number(b.listing.inStock) - Number(a.listing.inStock));
 }

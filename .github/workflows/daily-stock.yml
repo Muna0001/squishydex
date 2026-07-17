@@ -1,0 +1,77 @@
+name: Daily stock refresh
+
+# Refreshes availability from every store we can read without credentials:
+#   - i-bloom.shop + squishy-japan.com feeds (import-products.mjs)
+#   - Amazon public product pages, best-effort (check-amazon-stock.mjs)
+# then rebuilds the static site and redeploys GitHub Pages.
+# Failed per-item checks keep their previous values (stale-but-honest).
+
+on:
+  schedule:
+    - cron: "0 11 * * *" # daily ~4am Pacific
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-stock
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Refresh shop feeds (iBloom, Squishy Japan)
+        run: node scripts/import-products.mjs
+
+      - name: Check Amazon availability (best-effort)
+        run: node scripts/check-amazon-stock.mjs
+
+      - name: Commit refreshed data
+        run: |
+          git config user.name "squishydex-stock-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/data/imported.ts src/data/amazon-stock.ts
+          if git diff --cached --quiet; then
+            echo "No stock changes today."
+          else
+            git commit -m "chore: daily stock refresh"
+            git push
+          fi
+
+      - name: Build static site
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          npx expo export --platform web
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
+          commit_message: "Deploy: daily stock refresh"
+
+      # Pages builds have hung on this repo before; poke it explicitly.
+      - name: Trigger Pages build
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/pages/builds || true
